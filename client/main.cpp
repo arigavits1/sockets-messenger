@@ -1,13 +1,13 @@
-#include "imgui.h"
-#include "imgui_impl_glfw.h"
-#include "imgui_impl_opengl3.h"
+#include <imgui/imgui.h>
+#include <imgui/imgui_impl_glfw.h>
+#include <imgui/imgui_impl_opengl3.h>
 #include <iostream>
 #include <functional>
 #include <thread>
 #define GL_SILENCE_DEPRECATION
 #include <GLFW/glfw3.h>
 #include "include/networking.h"
-#include "include/main.h"
+#include "include/utils.h"
 
 int main(int argc, char* argv[])
 {
@@ -34,8 +34,8 @@ int main(int argc, char* argv[])
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        imgui::TextWindow("Messages", dynamicTextBuffer, ImVec2(WIN_WIDTH, WIN_HEIGHT / 1.2f), ImVec2(0.0f, 0.0f));
-        imgui::InputWindow("Prompt", inputBuffer, inputBufferSize, ImVec2(WIN_WIDTH, 100), ImVec2(0.0f, WIN_HEIGHT / 1.2f));
+        imgui::TextWindow("Messages", dynamicTextBuffer, ImVec2(glfw::WIN_WIDTH, glfw::WIN_HEIGHT / 1.2f), ImVec2(0.0f, 0.0f));
+        imgui::InputWindow("Prompt", inputBuffer, inputBufferSize, ImVec2(glfw::WIN_WIDTH, 100), ImVec2(0.0f, glfw::WIN_HEIGHT / 1.2f));
         if (ImGui::IsKeyPressed(ImGuiKey_Enter) && inputBuffer[0] != '\0')
         {
             //dynamicTextBuffer += "\n" + clientName + ": ";
