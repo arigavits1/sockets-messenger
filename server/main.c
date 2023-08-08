@@ -58,7 +58,7 @@ int main()
     memset(&server_address, 0, sizeof(server_address));
     server_address.sin_family = AF_INET;
     server_address.sin_port = htons(PORT);
-    inet_pton(AF_INET, "192.168.1.6", &(server_address.sin_addr));
+    inet_pton(AF_INET, "127.0.0.1", &(server_address.sin_addr));
 
     if (bind(sockfd, (const struct sockaddr*)&server_address, sizeof(server_address)) == -1)
     {

@@ -12,13 +12,8 @@
 int main(int argc, char* argv[])
 {
     int sockfd = networkSetup();
-    if (sockfd < 0)
-    {
-        return sockfd;
-    }
-    std::cout << "Connected to server!\n";
     GLFWwindow* window = glfw::Setup();
-    ImGuiIO& io = imgui::Setup(window);
+    ImGuiIO& io = imgui::Setup(window); (void)io;
     std::atomic<bool> should_run(true);
 
     std::string dynamicTextBuffer;
