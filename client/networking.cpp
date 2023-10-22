@@ -1,5 +1,10 @@
 #include "include/networking.h"
 
+struct Data
+{
+    char buffer[256];
+} typedef Data;
+
 int networkSetup()
 {
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -24,9 +29,13 @@ int networkSetup()
     return sockfd;
 }
 
-void* sendToServer(int sockfd, std::string& message, size_t messageSize)
+void* sendToServer(int sockfd, std::string& message)
 {
-    ssize_t bytes_sent = send(sockfd, message.c_str(), messageSize, 0);
+    Data sendData;
+    strncpy(sendData.buffer, message.c_str(), sizeof(sendData.buffer));
+    char buffer[sizeof(sendData)];
+    memcpy(buffer, &sendData, sizeof(buffer));
+    ssize_t bytes_sent = send(sockfd, buffer, sizeof(buffer), 0);
     if (bytes_sent < 0)
     {
         perror("Error sending data");
@@ -36,9 +45,10 @@ void* sendToServer(int sockfd, std::string& message, size_t messageSize)
 
 void* recvFromServer(int sockfd, std::string* imguiBuffer, std::atomic<bool>& should_run)
 {
-    char buffer[256];
     fd_set readfds;
     struct timeval tv;
+    Data recvData;
+    char buffer[sizeof(recvData)];
 
     for (;;)
     {
@@ -62,7 +72,8 @@ void* recvFromServer(int sockfd, std::string* imguiBuffer, std::atomic<bool>& sh
 
         memset(buffer, 0, sizeof(buffer));
         ssize_t bytes_received = recv(sockfd, buffer, sizeof(buffer) - 1, 0);
-        buffer[bytes_received] = '\0';
+        memcpy(&recvData, buffer, sizeof(recvData));
+        recvData.buffer[bytes_received - sizeof(recvData) + sizeof(recvData.buffer) - 1] = '\0';
 
         if (bytes_received < 0)
         {
@@ -74,11 +85,11 @@ void* recvFromServer(int sockfd, std::string* imguiBuffer, std::atomic<bool>& sh
             break;
         }
 
-        std::string tempBuffer = buffer;
+        std::string tempBuffer = recvData.buffer;
         *imguiBuffer += "\n" + tempBuffer;
-        std::cout << buffer << "\n" << std::flush;
+        std::cout << recvData.buffer << "\n" << std::flush;
 
-        if (strcmp(buffer, "bye") == 0)
+        if (strcmp(recvData.buffer, "bye") == 0)
         {
             std::cout << "Disconnecting..." << std::endl;
             should_run = false;

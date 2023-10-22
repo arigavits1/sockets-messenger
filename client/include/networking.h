@@ -13,6 +13,7 @@
 
 #define PORT 62
 
+struct Data;
 int networkSetup();
-void* sendToServer(int sockfd, std::string& message, size_t messageSize);
+void* sendToServer(int sockfd, std::string& message);
 void* recvFromServer(int sockfd, std::string* imguiBuffer, std::atomic<bool>& should_run);

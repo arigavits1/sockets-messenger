@@ -35,7 +35,7 @@ int main(int argc, char* argv[])
         {
             //dynamicTextBuffer += "\n" + clientName + ": ";
             std::string tempBuffer(inputBuffer, inputBufferSize);
-            sendToServer(sockfd, tempBuffer, inputBufferSize);
+            sendToServer(sockfd, tempBuffer);
             // dynamicTextBuffer += inputBuffer;
             memset(inputBuffer, 0, sizeof(inputBuffer));
         }
@@ -51,7 +51,7 @@ int main(int argc, char* argv[])
         glfwPollEvents();
     }
     std::string byeMessage = "bye";
-    sendToServer(sockfd, std::ref(byeMessage), sizeof(byeMessage));
+    sendToServer(sockfd, std::ref(byeMessage));
 
     recvThread.join();
     ImGui_ImplOpenGL3_Shutdown();

@@ -11,30 +11,40 @@
 
 #define PORT 62
 
+struct Data
+{
+    char buffer[256];
+} typedef Data;
+
 void* recvFromClient(void* arg)
 {
     int* clientfd = (int*)arg;
-    char buffer[256];
+    Data sendData;
+    char buffer[sizeof(sendData)];
     for (;;)
     {
         ssize_t bytes_received = recv(clientfd[0], buffer, sizeof(buffer) - 1, 0);
+        memcpy(&sendData, buffer, sizeof(sendData));
         if (bytes_received < 0)
         {
             perror("Recv failed");
             return NULL;
         }
-        else if (strcmp(buffer, "") == 0)
+        else if (strcmp(sendData.buffer, "") == 0)
         {
             continue;
         }
-        buffer[bytes_received] = '\0';
+        sendData.buffer[bytes_received - sizeof(sendData) + sizeof(sendData.buffer) - 1] = '\0';
+        memset(buffer, 0, sizeof(buffer));
         
-        printf("%s\n", buffer);
+        printf("%s\n", sendData.buffer);
+        memcpy(buffer, &sendData, sizeof(sendData));
         for (int i = 0; i < 2; i++)
         {
             send(clientfd[i], buffer, sizeof(buffer), 0);
         }
         
+        memcpy(&sendData, buffer, sizeof(sendData));
         if (strcmp(buffer, "bye") == 0)
         {
             printf("Breaking...\n");
