@@ -85,7 +85,7 @@ int main()
     }
 
     int clientfd[2] = {};
-    int clientfd2[] = {};
+    int clientfd2[2] = {};
     for (int i = 0; i < 2; i++)
     {
         clientfd[i] = accept(sockfd, NULL, NULL);
