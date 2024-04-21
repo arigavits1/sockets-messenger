@@ -10,33 +10,29 @@
 #include <pthread.h>
 #include <ctype.h>
 #include <sys/time.h>
-#include <stdbool.h>
 
 #define PORT 62
-#define max(a,b) \
-   ({ __typeof__ (a) _a = (a); \
-       __typeof__ (b) _b = (b); \
-     _a > _b ? _a : _b; })
 
 struct Data
 {
     char buffer[256];
 } typedef Data;
 int max_sockets;
-bool should_quit = false;
+size_t clientfd_size;
 
 void quit(int clientfd[], int sockfd, int exit_code)
 {
-    for (int i = 0; i < 2; i++)
+    for (int i = 0; i < max_sockets - 1; i++)
     {
         close(clientfd[i]);
     }
     close(sockfd);
+    free(clientfd);
     printf("Quitting...\n");
     exit(exit_code);
 }
 
-void handleClientMessage(int clientfd[], int index)
+int handleClientMessage(int clientfd[], int index)
 {
     Data sendData;
     char buffer[sizeof(sendData)];
@@ -45,27 +41,45 @@ void handleClientMessage(int clientfd[], int index)
     if (bytes_received < 0)
     {
         perror("Recv failed");
-        return;
+        return 1;
     }
     sendData.buffer[bytes_received - sizeof(sendData) + sizeof(sendData.buffer) - 1] = '\0';
     memset(buffer, 0, sizeof(buffer));
         
     printf("%s\n", sendData.buffer);
     memcpy(buffer, &sendData, sizeof(sendData));
+
+    if (strcmp(sendData.buffer, "bye") == 0)
+    {
+        int temp_sock;
+        temp_sock = clientfd[index];
+        clientfd[index] = clientfd[max_sockets - 1];
+        clientfd[max_sockets - 1] = temp_sock;
+        send(clientfd[max_sockets - 1], buffer, sizeof(buffer), 0);
+        close(clientfd[max_sockets - 1]);
+        if (max_sockets == 1)
+        {
+            return -1;
+        }
+        void *temp = realloc(clientfd, clientfd_size - sizeof(int));
+        if (temp == NULL) 
+        {
+            perror("realloc");
+            return 1;
+        }
+        clientfd_size -= sizeof(int);
+        max_sockets--;
+        return 0;
+    }
+
     for (int i = 0; i < max_sockets; i++)
     {
         send(clientfd[i], buffer, sizeof(buffer), 0);
     }
-        
-    memcpy(&sendData, buffer, sizeof(sendData));
-    if (strcmp(buffer, "bye") == 0)
-    {
-        should_quit = true;
-        return;
-    }
+
     memset(&buffer, 0, sizeof(buffer));
     
-    return;
+    return 0;
 }
 
 int main(int argc, char* argv[])
@@ -106,7 +120,8 @@ int main(int argc, char* argv[])
         exit(1);
     }
 
-    int clientfd[max_sockets];
+    clientfd_size = sizeof(int) * max_sockets - 1;
+    int* clientfd = (int*)malloc(clientfd_size);
     for (int i = 0; i < max_sockets; i++)
     {
         clientfd[i] = accept(sockfd, NULL, NULL);
@@ -123,7 +138,6 @@ int main(int argc, char* argv[])
         }
     }
 
-    printf("Past setup\n");
     for(;;)
     {
         FD_ZERO(&readfds);
@@ -151,12 +165,17 @@ int main(int argc, char* argv[])
         {
             if (FD_ISSET(clientfd[i], &readfds))
             {
-                handleClientMessage(clientfd, i);
+                int exit_code = handleClientMessage(clientfd, i);
+                if (exit_code == 1)
+                {
+                    fprintf(stdout, "Error while handling client message\n");
+                    quit(clientfd, sockfd, exit_code);
+                }
+                if (exit_code == -1)
+                {
+                    quit(clientfd, sockfd, 0);
+                }
             }
-        }
-        if (should_quit)
-        {
-            quit(clientfd, sockfd, 0);
         }
     }
 }
