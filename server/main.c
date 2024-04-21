@@ -8,55 +8,77 @@
 #include <unistd.h>
 #include <string.h>
 #include <pthread.h>
+#include <ctype.h>
+#include <sys/time.h>
+#include <stdbool.h>
 
 #define PORT 62
+#define max(a,b) \
+   ({ __typeof__ (a) _a = (a); \
+       __typeof__ (b) _b = (b); \
+     _a > _b ? _a : _b; })
 
 struct Data
 {
     char buffer[256];
 } typedef Data;
+int max_sockets;
+bool should_quit = false;
 
-void* recvFromClient(void* arg)
+void quit(int clientfd[], int sockfd, int exit_code)
 {
-    int* clientfd = (int*)arg;
-    Data sendData;
-    char buffer[sizeof(sendData)];
-    for (;;)
+    for (int i = 0; i < 2; i++)
     {
-        ssize_t bytes_received = recv(clientfd[0], buffer, sizeof(buffer) - 1, 0);
-        memcpy(&sendData, buffer, sizeof(sendData));
-        if (bytes_received < 0)
-        {
-            perror("Recv failed");
-            return NULL;
-        }
-        else if (strcmp(sendData.buffer, "") == 0)
-        {
-            continue;
-        }
-        sendData.buffer[bytes_received - sizeof(sendData) + sizeof(sendData.buffer) - 1] = '\0';
-        memset(buffer, 0, sizeof(buffer));
-        
-        printf("%s\n", sendData.buffer);
-        memcpy(buffer, &sendData, sizeof(sendData));
-        for (int i = 0; i < 2; i++)
-        {
-            send(clientfd[i], buffer, sizeof(buffer), 0);
-        }
-        
-        memcpy(&sendData, buffer, sizeof(sendData));
-        if (strcmp(buffer, "bye") == 0)
-        {
-            printf("Breaking...\n");
-            break;
-        }
-        memset(&buffer, 0, sizeof(buffer));
+        close(clientfd[i]);
     }
-    return NULL;
+    close(sockfd);
+    printf("Quitting...\n");
+    exit(exit_code);
 }
 
-int main()
+void handleClientMessage(int clientfd[], int index)
 {
+    Data sendData;
+    char buffer[sizeof(sendData)];
+    ssize_t bytes_received = recv(clientfd[index], buffer, sizeof(buffer) - 1, 0);
+    memcpy(&sendData, buffer, sizeof(sendData));
+    if (bytes_received < 0)
+    {
+        perror("Recv failed");
+        return;
+    }
+    sendData.buffer[bytes_received - sizeof(sendData) + sizeof(sendData.buffer) - 1] = '\0';
+    memset(buffer, 0, sizeof(buffer));
+        
+    printf("%s\n", sendData.buffer);
+    memcpy(buffer, &sendData, sizeof(sendData));
+    for (int i = 0; i < max_sockets; i++)
+    {
+        send(clientfd[i], buffer, sizeof(buffer), 0);
+    }
+        
+    memcpy(&sendData, buffer, sizeof(sendData));
+    if (strcmp(buffer, "bye") == 0)
+    {
+        should_quit = true;
+        return;
+    }
+    memset(&buffer, 0, sizeof(buffer));
+    
+    return;
+}
+
+int main(int argc, char* argv[])
+{
+    char* argument = argv[1];
+    if (argument == NULL)
+    {
+        fprintf(stderr, "Invalid argument! Breaking...\n");
+        exit(1);
+    }
+    max_sockets = (int)*argument - '0';
+    printf("%d\n", max_sockets);
+
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd == -1)
     {
@@ -84,27 +106,56 @@ int main()
         exit(1);
     }
 
-    int clientfd[2] = {};
-    int clientfd2[2] = {};
-    for (int i = 0; i < 2; i++)
+    int clientfd[max_sockets];
+    for (int i = 0; i < max_sockets; i++)
     {
         clientfd[i] = accept(sockfd, NULL, NULL);
     }
-    clientfd2[0] = clientfd[1];
-    clientfd2[1] = clientfd[0];
 
-    pthread_t thread[2] = {};
-    pthread_create(&thread[0], NULL, recvFromClient, (void*)clientfd);
-    pthread_create(&thread[1], NULL, recvFromClient, (void*)clientfd2);
-
-    for (int i = 0; i < 2; i++)
+    fd_set readfds;
+    struct timeval tv;
+    int max_fd = clientfd[0];
+    for (int i = 0; i < max_sockets; i++)
     {
-        pthread_join(thread[i], NULL);
+        if (clientfd[i] > max_fd)
+        {
+            max_fd = clientfd[i];
+        }
     }
 
-    for (int i = 0; i < 2; i++)
+    for(;;)
     {
-        close(clientfd[i]);
+        FD_ZERO(&readfds);
+        for (int i = 0; i < max_sockets; i++)
+        {
+            FD_SET(clientfd[i], &readfds);
+        }
+
+        tv.tv_sec = 0;
+        tv.tv_usec = 500000;
+
+        int select_result = select(max_fd + 1, &readfds, NULL, NULL, &tv);
+
+        if (select_result == -1)
+        {
+            perror("Select error");
+            break;
+        }
+        else if (select_result == 0)
+        {
+            continue;
+        }
+
+        for (int i = 0; i < max_sockets; i++)
+        {
+            if (FD_ISSET(clientfd[i], &readfds))
+            {
+                handleClientMessage(clientfd, i);
+            }
+        }
+        if (should_quit)
+        {
+            quit(clientfd, sockfd, 0);
+        }
     }
-    close(sockfd);
 }
