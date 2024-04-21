@@ -123,6 +123,7 @@ int main(int argc, char* argv[])
         }
     }
 
+    printf("Past setup\n");
     for(;;)
     {
         FD_ZERO(&readfds);
@@ -130,7 +131,7 @@ int main(int argc, char* argv[])
         {
             FD_SET(clientfd[i], &readfds);
         }
-
+        
         tv.tv_sec = 0;
         tv.tv_usec = 500000;
 
