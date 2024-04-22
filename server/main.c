@@ -1,86 +1,4 @@
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-#include <string.h>
-#include <pthread.h>
-#include <ctype.h>
-#include <sys/time.h>
-
-#define PORT 62
-
-struct Data
-{
-    char buffer[256];
-} typedef Data;
-int max_sockets;
-size_t clientfd_size;
-
-void quit(int clientfd[], int sockfd, int exit_code)
-{
-    for (int i = 0; i < max_sockets - 1; i++)
-    {
-        close(clientfd[i]);
-    }
-    close(sockfd);
-    free(clientfd);
-    printf("Quitting...\n");
-    exit(exit_code);
-}
-
-int handleClientMessage(int clientfd[], int index)
-{
-    Data sendData;
-    char buffer[sizeof(sendData)];
-    ssize_t bytes_received = recv(clientfd[index], buffer, sizeof(buffer) - 1, 0);
-    memcpy(&sendData, buffer, sizeof(sendData));
-    if (bytes_received < 0)
-    {
-        perror("Recv failed");
-        return 1;
-    }
-    sendData.buffer[bytes_received - sizeof(sendData) + sizeof(sendData.buffer) - 1] = '\0';
-    memset(buffer, 0, sizeof(buffer));
-        
-    printf("%s\n", sendData.buffer);
-    memcpy(buffer, &sendData, sizeof(sendData));
-
-    if (strcmp(sendData.buffer, "bye") == 0)
-    {
-        int temp_sock;
-        temp_sock = clientfd[index];
-        clientfd[index] = clientfd[max_sockets - 1];
-        clientfd[max_sockets - 1] = temp_sock;
-        send(clientfd[max_sockets - 1], buffer, sizeof(buffer), 0);
-        close(clientfd[max_sockets - 1]);
-        if (max_sockets == 1)
-        {
-            return -1;
-        }
-        void *temp = realloc(clientfd, clientfd_size - sizeof(int));
-        if (temp == NULL) 
-        {
-            perror("realloc");
-            return 1;
-        }
-        clientfd_size -= sizeof(int);
-        max_sockets--;
-        return 0;
-    }
-
-    for (int i = 0; i < max_sockets; i++)
-    {
-        send(clientfd[i], buffer, sizeof(buffer), 0);
-    }
-
-    memset(&buffer, 0, sizeof(buffer));
-    
-    return 0;
-}
+#include "header.h"
 
 int main(int argc, char* argv[])
 {
@@ -90,8 +8,8 @@ int main(int argc, char* argv[])
         fprintf(stderr, "Invalid argument! Breaking...\n");
         exit(1);
     }
-    max_sockets = (int)*argument - '0';
-    printf("%d\n", max_sockets);
+    clientfd.max = (int)*argument - '0';
+    printf("%d\n", clientfd.max);
 
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd == -1)
@@ -120,34 +38,34 @@ int main(int argc, char* argv[])
         exit(1);
     }
 
-    clientfd_size = sizeof(int) * max_sockets - 1;
-    int* clientfd = (int*)malloc(clientfd_size);
-    for (int i = 0; i < max_sockets; i++)
+    clientfd.size = sizeof(int) * clientfd.max - 1;
+    clientfd.list = (int*)malloc(clientfd.size);
+    for (int i = 0; i < clientfd.max; i++)
     {
-        clientfd[i] = accept(sockfd, NULL, NULL);
+        clientfd.list[i] = accept(sockfd, NULL, NULL);
     }
 
     fd_set readfds;
     struct timeval tv;
-    int max_fd = clientfd[0];
-    for (int i = 0; i < max_sockets; i++)
+    int max_fd = clientfd.list[0];
+    for (int i = 0; i < clientfd.max; i++)
     {
-        if (clientfd[i] > max_fd)
+        if (clientfd.list[i] > max_fd)
         {
-            max_fd = clientfd[i];
+            max_fd = clientfd.list[i];
         }
     }
 
     for(;;)
     {
         FD_ZERO(&readfds);
-        for (int i = 0; i < max_sockets; i++)
+        for (int i = 0; i < clientfd.max; i++)
         {
-            FD_SET(clientfd[i], &readfds);
+            FD_SET(clientfd.list[i], &readfds);
         }
         
         tv.tv_sec = 0;
-        tv.tv_usec = 500000;
+        tv.tv_usec = 50000;
 
         int select_result = select(max_fd + 1, &readfds, NULL, NULL, &tv);
 
@@ -161,19 +79,19 @@ int main(int argc, char* argv[])
             continue;
         }
 
-        for (int i = 0; i < max_sockets; i++)
+        for (int i = 0; i < clientfd.max; i++)
         {
-            if (FD_ISSET(clientfd[i], &readfds))
+            if (FD_ISSET(clientfd.list[i], &readfds))
             {
-                int exit_code = handleClientMessage(clientfd, i);
+                int exit_code = handleClientMessage(&clientfd, i);
                 if (exit_code == 1)
                 {
                     fprintf(stdout, "Error while handling client message\n");
-                    quit(clientfd, sockfd, exit_code);
+                    quit(&clientfd, sockfd, exit_code);
                 }
                 if (exit_code == -1)
                 {
-                    quit(clientfd, sockfd, 0);
+                    quit(&clientfd, sockfd, 0);
                 }
             }
         }

@@ -80,7 +80,7 @@ endif
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 all: $(EXE)
-	@echo Build complete for $(ECHO_MESSAGE)
+	@echo Build complete for $(ECHO_MESSAGE) && rm -r *.o
 
 $(EXE): $(OBJS)
 	$(CXX) -o $@ $^ $(CXXFLAGS) $(LIBS)

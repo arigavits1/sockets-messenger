@@ -55,8 +55,8 @@ void* recvFromServer(int sockfd, std::string* imguiBuffer, std::atomic<bool>& sh
         FD_ZERO(&readfds);
         FD_SET(sockfd, &readfds);
 
-        tv.tv_sec = 1;
-        tv.tv_usec = 0;
+        tv.tv_sec = 0;
+        tv.tv_usec = 50000;
 
         int select_result = select(sockfd + 1, &readfds, NULL, NULL, &tv);
 
