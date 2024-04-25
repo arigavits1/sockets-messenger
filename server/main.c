@@ -2,15 +2,6 @@
 
 int main(int argc, char* argv[])
 {
-    char* argument = argv[1];
-    if (argument == NULL)
-    {
-        fprintf(stderr, "Invalid argument! Breaking...\n");
-        exit(1);
-    }
-    clientfd.max = (int)*argument - '0';
-    printf("%d\n", clientfd.max);
-
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd == -1)
     {
@@ -38,23 +29,27 @@ int main(int argc, char* argv[])
         exit(1);
     }
 
+    clientfd.max = 1;
     clientfd.size = sizeof(int) * clientfd.max - 1;
     clientfd.list = (int*)malloc(clientfd.size);
-    for (int i = 0; i < clientfd.max; i++)
-    {
-        clientfd.list[i] = accept(sockfd, NULL, NULL);
-    }
-
-    fd_set readfds;
-    struct timeval tv;
     int max_fd = clientfd.list[0];
     for (int i = 0; i < clientfd.max; i++)
     {
+        clientfd.list[i] = accept(sockfd, NULL, NULL);
         if (clientfd.list[i] > max_fd)
         {
             max_fd = clientfd.list[i];
         }
     }
+    if (sockfd > max_fd)
+    {
+        max_fd = sockfd;
+    }
+
+    fd_set readfds;
+    struct timeval tv;        
+    tv.tv_sec = 0;
+    tv.tv_usec = 50000;
 
     for(;;)
     {
@@ -63,9 +58,7 @@ int main(int argc, char* argv[])
         {
             FD_SET(clientfd.list[i], &readfds);
         }
-        
-        tv.tv_sec = 0;
-        tv.tv_usec = 50000;
+        FD_SET(sockfd, &readfds);
 
         int select_result = select(max_fd + 1, &readfds, NULL, NULL, &tv);
 
@@ -94,6 +87,24 @@ int main(int argc, char* argv[])
                     quit(&clientfd, sockfd, 0);
                 }
             }
+        }
+        if (FD_ISSET(sockfd, &readfds))
+        {
+            clientfd.size += sizeof(int);
+            void *temp = realloc(clientfd.list, clientfd.size);
+            if (temp == NULL) 
+            {
+                perror("realloc");
+                return 1;
+            }
+            clientfd.list[clientfd.max] = accept(sockfd, NULL, NULL);
+
+            if (clientfd.list[clientfd.max] > max_fd)
+            {
+                max_fd = clientfd.list[clientfd.max];
+            }
+
+            clientfd.max++;
         }
     }
 }

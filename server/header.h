@@ -69,13 +69,14 @@ int handleClientMessage(ClientData* clientfd, int index)
         {
             return -1;
         }
-        void *temp = realloc(clientfd->list, clientfd->size - sizeof(int));
+
+        clientfd->size -= sizeof(int);
+        void *temp = realloc(clientfd->list, clientfd->size);
         if (temp == NULL) 
         {
             perror("realloc");
             return 1;
         }
-        clientfd->size -= sizeof(int);
         clientfd->max--;
         return 0;
     }
