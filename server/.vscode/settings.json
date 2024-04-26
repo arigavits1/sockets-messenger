@@ -3,6 +3,7 @@
         "types.h": "c",
         "functions.h": "c",
         "unistd.h": "c",
-        "limits": "c"
+        "limits": "c",
+        "header.h": "c"
     }
 }

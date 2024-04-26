@@ -21,30 +21,45 @@ typedef struct
 
 typedef struct
 {
-    int max;
-    size_t size;
-    int* list;
-} ClientData;
+    int max_clients;
+    size_t client_size;
+    int* client_array;
+    int sockfd;
+    int max_fd;
+} SocketData;
 
-ClientData clientfd = {};
+SocketData sockData = {};
 
-void quit(ClientData* clientfd, int sockfd, int exit_code)
+void quit(SocketData* sockData, int exit_code)
 {
-    for (int i = 0; i < clientfd->max - 1; i++)
+    for (int i = 0; i < sockData->max_clients - 1; i++)
     {
-        close(clientfd->list[i]);
+        close(sockData->client_array[i]);
     }
-    close(sockfd);
-    free(clientfd->list);
+    close(sockData->sockfd);
+    free(sockData->client_array);
     printf("Quitting...\n");
     exit(exit_code);
 }
 
-int handleClientMessage(ClientData* clientfd, int index)
+void SetupSockets(SocketData* sockData)
+{
+    sockData->max_clients = 1;
+    sockData->client_size = sizeof(int) * sockData->max_clients;
+    sockData->client_array = (int*)malloc(sockData->client_size);
+    sockData->client_array[0] = accept(sockData->sockfd, NULL, NULL);
+    sockData->max_fd = sockData->client_array[0];
+    if (sockData->sockfd > sockData->max_fd)
+    {
+        sockData->max_fd = sockData->sockfd;
+    }
+}
+
+int handleClientMessage(SocketData* sockData, int index)
 {
     Data sendData;
     char buffer[sizeof(sendData)];
-    ssize_t bytes_received = recv(clientfd->list[index], buffer, sizeof(buffer) - 1, 0);
+    ssize_t bytes_received = recv(sockData->client_array[index], buffer, sizeof(buffer) - 1, 0);
     memcpy(&sendData, buffer, sizeof(sendData));
     if (bytes_received < 0)
     {
@@ -60,30 +75,30 @@ int handleClientMessage(ClientData* clientfd, int index)
     if (strcmp(sendData.buffer, "bye") == 0)
     {
         int temp_sock;
-        temp_sock = clientfd->list[index];
-        clientfd->list[index] = clientfd->list[clientfd->max - 1];
-        clientfd->list[clientfd->max - 1] = temp_sock;
-        send(clientfd->list[clientfd->max - 1], buffer, sizeof(buffer), 0);
-        close(clientfd->list[clientfd->max - 1]);
-        if (clientfd->max == 1)
+        temp_sock = sockData->client_array[index];
+        sockData->client_array[index] = sockData->client_array[sockData->max_clients - 1];
+        sockData->client_array[sockData->max_clients - 1] = temp_sock;
+        send(sockData->client_array[sockData->max_clients - 1], buffer, sizeof(buffer), 0);
+        close(sockData->client_array[sockData->max_clients - 1]);
+        if (sockData->max_clients == 1)
         {
             return -1;
         }
 
-        clientfd->size -= sizeof(int);
-        void *temp = realloc(clientfd->list, clientfd->size);
+        sockData->client_size -= sizeof(int);
+        void *temp = realloc(sockData->client_array, sockData->client_size);
         if (temp == NULL) 
         {
             perror("realloc");
             return 1;
         }
-        clientfd->max--;
+        sockData->max_clients--;
         return 0;
     }
 
-    for (int i = 0; i < clientfd->max; i++)
+    for (int i = 0; i < sockData->max_clients; i++)
     {
-        send(clientfd->list[i], buffer, sizeof(buffer), 0);
+        send(sockData->client_array[i], buffer, sizeof(buffer), 0);
     }
 
     memset(&buffer, 0, sizeof(buffer));

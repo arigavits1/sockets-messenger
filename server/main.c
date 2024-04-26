@@ -2,8 +2,8 @@
 
 int main(int argc, char* argv[])
 {
-    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd == -1)
+    sockData.sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockData.sockfd == -1)
     {
         perror("Socket error");
         exit(1);
@@ -15,36 +15,21 @@ int main(int argc, char* argv[])
     server_address.sin_port = htons(PORT);
     inet_pton(AF_INET, "127.0.0.1", &(server_address.sin_addr));
 
-    if (bind(sockfd, (const struct sockaddr*)&server_address, sizeof(server_address)) == -1)
+    if (bind(sockData.sockfd, (const struct sockaddr*)&server_address, sizeof(server_address)) == -1)
     {
         perror("Bind error");
-        close(sockfd);
+        close(sockData.sockfd);
         exit(1);
     }
     
-    if (listen(sockfd, 2) == -1)
+    if (listen(sockData.sockfd, 2) == -1)
     {
         perror("Listen error");
-        close(sockfd);
+        close(sockData.sockfd);
         exit(1);
     }
 
-    clientfd.max = 1;
-    clientfd.size = sizeof(int) * clientfd.max - 1;
-    clientfd.list = (int*)malloc(clientfd.size);
-    int max_fd = clientfd.list[0];
-    for (int i = 0; i < clientfd.max; i++)
-    {
-        clientfd.list[i] = accept(sockfd, NULL, NULL);
-        if (clientfd.list[i] > max_fd)
-        {
-            max_fd = clientfd.list[i];
-        }
-    }
-    if (sockfd > max_fd)
-    {
-        max_fd = sockfd;
-    }
+    SetupSockets(&sockData);
 
     fd_set readfds;
     struct timeval tv;        
@@ -54,13 +39,13 @@ int main(int argc, char* argv[])
     for(;;)
     {
         FD_ZERO(&readfds);
-        for (int i = 0; i < clientfd.max; i++)
+        for (int i = 0; i < sockData.max_clients; i++)
         {
-            FD_SET(clientfd.list[i], &readfds);
+            FD_SET(sockData.client_array[i], &readfds);
         }
-        FD_SET(sockfd, &readfds);
+        FD_SET(sockData.sockfd, &readfds);
 
-        int select_result = select(max_fd + 1, &readfds, NULL, NULL, &tv);
+        int select_result = select(sockData.max_fd + 1, &readfds, NULL, NULL, &tv);
 
         if (select_result == -1)
         {
@@ -72,39 +57,40 @@ int main(int argc, char* argv[])
             continue;
         }
 
-        for (int i = 0; i < clientfd.max; i++)
+        for (int i = 0; i < sockData.max_clients; i++)
         {
-            if (FD_ISSET(clientfd.list[i], &readfds))
+            if (FD_ISSET(sockData.client_array[i], &readfds))
             {
-                int exit_code = handleClientMessage(&clientfd, i);
+                int exit_code = handleClientMessage(&sockData, i);
                 if (exit_code == 1)
                 {
                     fprintf(stdout, "Error while handling client message\n");
-                    quit(&clientfd, sockfd, exit_code);
+                    quit(&sockData, exit_code);
                 }
                 if (exit_code == -1)
                 {
-                    quit(&clientfd, sockfd, 0);
+                    free(sockData.client_array);
+                    SetupSockets(&sockData);
                 }
             }
         }
-        if (FD_ISSET(sockfd, &readfds))
+        if (FD_ISSET(sockData.sockfd, &readfds))
         {
-            clientfd.size += sizeof(int);
-            void *temp = realloc(clientfd.list, clientfd.size);
+            sockData.client_size += sizeof(int);
+            void *temp = realloc(sockData.client_array, sockData.client_size);
             if (temp == NULL) 
             {
                 perror("realloc");
                 return 1;
             }
-            clientfd.list[clientfd.max] = accept(sockfd, NULL, NULL);
+            sockData.client_array[sockData.max_clients] = accept(sockData.sockfd, NULL, NULL);
 
-            if (clientfd.list[clientfd.max] > max_fd)
+            if (sockData.client_array[sockData.max_clients] > sockData.max_fd)
             {
-                max_fd = clientfd.list[clientfd.max];
+                sockData.max_fd = sockData.client_array[sockData.max_clients];
             }
 
-            clientfd.max++;
+            sockData.max_clients++;
         }
     }
 }
