@@ -66,11 +66,17 @@ int handleClientMessage(SocketData* sockData, int index)
         perror("Recv failed");
         return 1;
     }
-    sendData.buffer[bytes_received - sizeof(sendData) + sizeof(sendData.buffer) - 1] = '\0';
+    sendData.buffer[strlen(sendData.buffer)] = '\0';
     memset(buffer, 0, sizeof(buffer));
-        
-    printf("%s\n", sendData.buffer);
+
     memcpy(buffer, &sendData, sizeof(sendData));
+
+    if (strcmp(sendData.buffer, "") == 0)
+    {
+        return 0;
+    }
+
+    printf("%s\n", sendData.buffer);
 
     if (strcmp(sendData.buffer, "bye") == 0)
     {

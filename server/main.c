@@ -13,7 +13,7 @@ int main(int argc, char* argv[])
     memset(&server_address, 0, sizeof(server_address));
     server_address.sin_family = AF_INET;
     server_address.sin_port = htons(PORT);
-    inet_pton(AF_INET, "127.0.0.1", &(server_address.sin_addr));
+    inet_pton(AF_INET, "192.168.1.6", &(server_address.sin_addr));
 
     if (bind(sockData.sockfd, (const struct sockaddr*)&server_address, sizeof(server_address)) == -1)
     {
@@ -56,7 +56,7 @@ int main(int argc, char* argv[])
         {
             continue;
         }
-
+        
         for (int i = 0; i < sockData.max_clients; i++)
         {
             if (FD_ISSET(sockData.client_array[i], &readfds))

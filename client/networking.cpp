@@ -18,7 +18,7 @@ int networkSetup()
     memset(&server_address, 0, sizeof(server_address));
     server_address.sin_family = AF_INET;
     server_address.sin_port = htons(PORT);
-    inet_pton(AF_INET, "127.0.0.1", &(server_address.sin_addr));
+    inet_pton(AF_INET, "192.168.1.6", &(server_address.sin_addr));
     if (connect(sockfd, (struct sockaddr*)&server_address, sizeof(server_address)) < 0)
     {
         std::cerr << "Error connecting to the server" << std::endl;
@@ -55,8 +55,8 @@ void* recvFromServer(int sockfd, std::string* imguiBuffer, std::atomic<bool>& sh
         FD_ZERO(&readfds);
         FD_SET(sockfd, &readfds);
 
-        tv.tv_sec = 0;
-        tv.tv_usec = 50000;
+        tv.tv_sec = 5;
+        tv.tv_usec = 0;
 
         int select_result = select(sockfd + 1, &readfds, NULL, NULL, &tv);
 
@@ -73,7 +73,7 @@ void* recvFromServer(int sockfd, std::string* imguiBuffer, std::atomic<bool>& sh
         memset(buffer, 0, sizeof(buffer));
         ssize_t bytes_received = recv(sockfd, buffer, sizeof(buffer) - 1, 0);
         memcpy(&recvData, buffer, sizeof(recvData));
-        recvData.buffer[bytes_received - sizeof(recvData) + sizeof(recvData.buffer) - 1] = '\0';
+        recvData.buffer[strlen(recvData.buffer)] = '\0';
 
         if (bytes_received < 0)
         {
@@ -85,8 +85,13 @@ void* recvFromServer(int sockfd, std::string* imguiBuffer, std::atomic<bool>& sh
             break;
         }
 
+        if (strcmp(recvData.buffer, "") == 0)
+        {
+            continue;
+        }
+
         std::string tempBuffer = recvData.buffer;
-        *imguiBuffer += "\n" + tempBuffer;
+        *imguiBuffer += "\n\n" + tempBuffer;
         std::cout << recvData.buffer << "\n" << std::flush;
 
         if (strcmp(recvData.buffer, "bye") == 0)
