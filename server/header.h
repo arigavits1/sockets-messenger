@@ -17,6 +17,7 @@
 typedef struct
 {
     char buffer[256];
+    char name[256];
 } Data;
 
 typedef struct
@@ -27,6 +28,8 @@ typedef struct
     int sockfd;
     int max_fd;
 } SocketData;
+
+
 
 SocketData sockData = {};
 

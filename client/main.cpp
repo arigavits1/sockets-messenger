@@ -9,8 +9,17 @@
 #include "include/networking.h"
 #include "include/utils.h"
 
+std::string name;
+
 int main(int argc, char* argv[])
 {
+    std::cout << "Enter username: ";
+    std::cin >> name;
+    if (name.size() > 10)
+    {
+        std::cerr << "Name is too large!" << std::endl;
+        return 0;
+    }
     int sockfd = networkSetup();
     GLFWwindow* window = glfw::Setup();
     ImGuiIO& io = imgui::Setup(window); (void)io;

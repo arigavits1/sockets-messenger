@@ -3,6 +3,7 @@
 struct Data
 {
     char buffer[256];
+    char name[256];
 } typedef Data;
 
 int networkSetup()
@@ -33,6 +34,7 @@ void* sendToServer(int sockfd, std::string& message)
 {
     Data sendData;
     strncpy(sendData.buffer, message.c_str(), sizeof(sendData.buffer));
+    strncpy(sendData.name, name.c_str(), sizeof(sendData.name));
     char buffer[sizeof(sendData)];
     memcpy(buffer, &sendData, sizeof(buffer));
     ssize_t bytes_sent = send(sockfd, buffer, sizeof(buffer), 0);
@@ -90,8 +92,9 @@ void* recvFromServer(int sockfd, std::string* imguiBuffer, std::atomic<bool>& sh
             continue;
         }
 
-        std::string tempBuffer = recvData.buffer;
-        *imguiBuffer += "\n\n" + tempBuffer;
+        std::string textTempBuffer = recvData.buffer;
+        std::string nameTempBuffer = recvData.name;
+        *imguiBuffer += "\n\n" + nameTempBuffer + ": " + textTempBuffer;
         std::cout << recvData.buffer << "\n" << std::flush;
 
         if (strcmp(recvData.buffer, "bye") == 0)

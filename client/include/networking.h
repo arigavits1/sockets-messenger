@@ -12,6 +12,7 @@
 #include <atomic>
 
 #define PORT 62
+extern std::string name;
 
 struct Data;
 int networkSetup();
