@@ -20,10 +20,10 @@ int main(int argc, char* argv[])
         std::cerr << "Name is too large!" << std::endl;
         return 0;
     }
+    std::atomic<bool> should_run(true);
     int sockfd = networkSetup();
     GLFWwindow* window = glfw::Setup();
     ImGuiIO& io = imgui::Setup(window); (void)io;
-    std::atomic<bool> should_run(true);
 
     std::string dynamicTextBuffer;
     std::thread recvThread(recvFromServer, sockfd, &dynamicTextBuffer, std::ref(should_run));

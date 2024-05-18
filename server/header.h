@@ -29,9 +29,42 @@ typedef struct
     int max_fd;
 } SocketData;
 
-
+char** names;
+size_t names_size;
+int names_next = 1;
 
 SocketData sockData = {};
+
+void sendCode(int clientfd, int code)
+{
+    char buffer[4];
+    sprintf(buffer, "%d", code);
+    sleep(1);
+    send(clientfd, buffer, sizeof(buffer), 0);
+}
+
+int RemoveFromArray(int* array, size_t* size, int index)
+{
+    int temp_sock;
+    int array_size = *size / sizeof(int);
+    temp_sock = array[index];
+    array[index] = array[array_size - 1];
+    array[array_size - 1] = temp_sock;
+    
+    if (array_size == 1)
+    {
+        return -1;
+    }
+
+    *size -= sizeof(int);
+    void *temp = realloc(array, *size);
+    if (temp == NULL) 
+    {
+        perror("realloc");
+        return 1;
+    }
+    return 0;
+}
 
 void quit(SocketData* sockData, int exit_code)
 {
@@ -51,6 +84,7 @@ void SetupSockets(SocketData* sockData)
     sockData->client_size = sizeof(int) * sockData->max_clients;
     sockData->client_array = (int*)malloc(sockData->client_size);
     sockData->client_array[0] = accept(sockData->sockfd, NULL, NULL);
+    sendCode(sockData->client_array[0], 200);
     sockData->max_fd = sockData->client_array[0];
     if (sockData->sockfd > sockData->max_fd)
     {
@@ -83,26 +117,11 @@ int handleClientMessage(SocketData* sockData, int index)
 
     if (strcmp(sendData.buffer, "bye") == 0)
     {
-        int temp_sock;
-        temp_sock = sockData->client_array[index];
-        sockData->client_array[index] = sockData->client_array[sockData->max_clients - 1];
-        sockData->client_array[sockData->max_clients - 1] = temp_sock;
-        send(sockData->client_array[sockData->max_clients - 1], buffer, sizeof(buffer), 0);
-        close(sockData->client_array[sockData->max_clients - 1]);
-        if (sockData->max_clients == 1)
-        {
-            return -1;
-        }
-
-        sockData->client_size -= sizeof(int);
-        void *temp = realloc(sockData->client_array, sockData->client_size);
-        if (temp == NULL) 
-        {
-            perror("realloc");
-            return 1;
-        }
+        int code = RemoveFromArray(sockData->client_array, &sockData->client_size, index);
         sockData->max_clients--;
-        return 0;
+        send(sockData->client_array[sockData->max_clients], buffer, sizeof(buffer), 0);
+        close(sockData->client_array[sockData->max_clients]);
+        return code;
     }
 
     for (int i = 0; i < sockData->max_clients; i++)

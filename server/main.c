@@ -93,4 +93,5 @@ int main(int argc, char* argv[])
             sockData.max_clients++;
         }
     }
+    quit(&sockData, 0);
 }

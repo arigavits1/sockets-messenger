@@ -6,6 +6,21 @@ struct Data
     char name[256];
 } typedef Data;
 
+void* sendToServer(int sockfd, std::string& message)
+{
+    Data sendData;
+    strncpy(sendData.buffer, message.c_str(), sizeof(sendData.buffer));
+    strncpy(sendData.name, name.c_str(), sizeof(sendData.name));
+    char buffer[sizeof(sendData)];
+    memcpy(buffer, &sendData, sizeof(buffer));
+    ssize_t bytes_sent = send(sockfd, buffer, sizeof(buffer), 0);
+    if (bytes_sent < 0)
+    {
+        perror("Error sending data");
+    }
+    return NULL;
+}
+
 int networkSetup()
 {
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -26,23 +41,26 @@ int networkSetup()
         close(sockfd);
         exit(1);
     }
+    std::cout << "Waiting to connect..." << std::endl;
+
+    char buffer[4];
+    ssize_t bytes_received = recv(sockfd, buffer, sizeof(buffer), 0);
+    if (bytes_received < 0)
+    {
+        std::cerr << "Error receiving confirmation code" << std::endl;
+        exit(-1);
+    }
+    int code = atoi(buffer);
+    if (code != 200)
+    {
+        std::cerr << "Something went wrong" << std::endl;
+        std::string message = "bye";
+        sendToServer(sockfd, std::ref(message));
+        exit(-1);
+    }
+
     std::cout << "Connected to server!\n";
     return sockfd;
-}
-
-void* sendToServer(int sockfd, std::string& message)
-{
-    Data sendData;
-    strncpy(sendData.buffer, message.c_str(), sizeof(sendData.buffer));
-    strncpy(sendData.name, name.c_str(), sizeof(sendData.name));
-    char buffer[sizeof(sendData)];
-    memcpy(buffer, &sendData, sizeof(buffer));
-    ssize_t bytes_sent = send(sockfd, buffer, sizeof(buffer), 0);
-    if (bytes_sent < 0)
-    {
-        perror("Error sending data");
-    }
-    return NULL;
 }
 
 void* recvFromServer(int sockfd, std::string* imguiBuffer, std::atomic<bool>& should_run)
