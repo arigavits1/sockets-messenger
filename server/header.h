@@ -90,6 +90,7 @@ void SetupSockets(SocketData* sockData)
     if (sockData->client_array[0] < 0)
     {
         fprintf(stderr, "Connection to new client failed");
+        close(sockData->client_array[0]);
         free(sockData->client_array);
         SetupSockets(sockData);
     }
@@ -131,16 +132,18 @@ int handleClientMessage(SocketData* sockData, int index)
         return 0;
     }
 
-    printf("%s\n", sendData.buffer);
-
     if (strcmp(sendData.buffer, "bye") == 0)
     {
+        printf("User %s has disconnected\n", sendData.name);
+        fflush(stdout);
         int code = RemoveFromArray(sockData->client_array, &sockData->client_size, index);
         sockData->max_clients--;
         send(sockData->client_array[sockData->max_clients], buffer, sizeof(buffer), 0);
         close(sockData->client_array[sockData->max_clients]);
         return code;
     }
+
+    printf("%s\n", sendData.buffer);
 
     for (int i = 0; i < sockData->max_clients; i++)
     {

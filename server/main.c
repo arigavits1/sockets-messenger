@@ -87,6 +87,7 @@ int main(int argc, char* argv[])
             if (sockData.client_array[sockData.max_clients] < 0)
             {
                 fprintf(stderr, "Connection to new client failed\n");
+                close(sockData.client_array[sockData.max_clients]);
                 sockData.client_size -= sizeof(int);
                 void *temp = realloc(sockData.client_array, sockData.client_size);
                 if (temp == NULL) 
