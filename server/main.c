@@ -65,7 +65,7 @@ int main(int argc, char* argv[])
                 if (exit_code == 1)
                 {
                     fprintf(stdout, "Error while handling client message\n");
-                    quit(&sockData, exit_code);
+                    continue;
                 }
                 if (exit_code == -1)
                 {
@@ -84,6 +84,33 @@ int main(int argc, char* argv[])
                 return 1;
             }
             sockData.client_array[sockData.max_clients] = accept(sockData.sockfd, NULL, NULL);
+            if (sockData.client_array[sockData.max_clients] < 0)
+            {
+                fprintf(stderr, "Connection to new client failed\n");
+                sockData.client_size -= sizeof(int);
+                void *temp = realloc(sockData.client_array, sockData.client_size);
+                if (temp == NULL) 
+                {
+                    perror("realloc");
+                    return 1;
+                }
+                continue;
+            }
+            char name[11];
+            ssize_t bytes_received = recv(sockData.client_array[sockData.max_clients], name, sizeof(name), 0);
+            if (bytes_received < 0)
+            {
+                sockData.client_size -= sizeof(int);
+                void *temp = realloc(sockData.client_array, sockData.client_size);
+                if (temp == NULL) 
+                {
+                    perror("realloc");
+                    return 1;
+                }
+                continue;
+            }
+            printf("User %s has connected!\n", name);
+            sendCode(sockData.client_array[sockData.max_clients], 200);
 
             if (sockData.client_array[sockData.max_clients] > sockData.max_fd)
             {

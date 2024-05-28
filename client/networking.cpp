@@ -42,6 +42,7 @@ int networkSetup()
         exit(1);
     }
     std::cout << "Waiting to connect..." << std::endl;
+    send(sockfd, name.c_str(), strlen(name.c_str()) * sizeof(char), 0);
 
     char buffer[4];
     ssize_t bytes_received = recv(sockfd, buffer, sizeof(buffer), 0);

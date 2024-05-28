@@ -29,17 +29,20 @@ typedef struct
     int max_fd;
 } SocketData;
 
-char** names;
-size_t names_size;
-int names_next = 1;
+typedef struct
+{
+    char** array;
+    int next;
+    size_t size;
+} CharArray;
 
 SocketData sockData = {};
+CharArray names = {};
 
 void sendCode(int clientfd, int code)
 {
     char buffer[4];
     sprintf(buffer, "%d", code);
-    sleep(1);
     send(clientfd, buffer, sizeof(buffer), 0);
 }
 
@@ -84,6 +87,21 @@ void SetupSockets(SocketData* sockData)
     sockData->client_size = sizeof(int) * sockData->max_clients;
     sockData->client_array = (int*)malloc(sockData->client_size);
     sockData->client_array[0] = accept(sockData->sockfd, NULL, NULL);
+    if (sockData->client_array[0] < 0)
+    {
+        fprintf(stderr, "Connection to new client failed");
+        free(sockData->client_array);
+        SetupSockets(sockData);
+    }
+    char name[11];
+    ssize_t bytes_received = recv(sockData->client_array[0], name, sizeof(name), 0);
+    if (bytes_received < 0)
+    {
+        fprintf(stderr, "Connection to new client failed");
+        free(sockData->client_array);
+        SetupSockets(sockData);
+    }
+    printf("User %s has connected!\n", name);
     sendCode(sockData->client_array[0], 200);
     sockData->max_fd = sockData->client_array[0];
     if (sockData->sockfd > sockData->max_fd)
