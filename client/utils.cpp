@@ -5,14 +5,14 @@ namespace glfw
     unsigned int WIN_WIDTH = 640;
     unsigned int WIN_HEIGHT = 500;
 
-    GLFWwindow* Setup()
+    GLFWwindow* Setup(std::string title)
     {
         if (!glfwInit())
         {
             std::cerr << "Failed to initialize glfw" << std::endl;
             return nullptr;
         }
-        GLFWwindow* window = glfwCreateWindow(WIN_WIDTH, WIN_HEIGHT, "ImGUI", nullptr, nullptr);
+        GLFWwindow* window = glfwCreateWindow(WIN_WIDTH, WIN_HEIGHT, title.c_str(), nullptr, nullptr);
         if (window == NULL)
         {
             std::cerr << "Failed to initialize window" << std::endl;

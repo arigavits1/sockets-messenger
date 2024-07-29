@@ -12,7 +12,7 @@
 #include <ctype.h>
 #include <sys/time.h>
 
-#define PORT 62
+#define PORT 8080
 
 typedef struct
 {

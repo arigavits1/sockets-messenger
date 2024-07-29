@@ -4,6 +4,7 @@
         "functions.h": "c",
         "unistd.h": "c",
         "limits": "c",
-        "header.h": "c"
+        "header.h": "c",
+        "typeinfo": "c"
     }
 }

@@ -15,7 +15,7 @@ namespace glfw
     extern unsigned int WIN_WIDTH;
     extern unsigned int WIN_HEIGHT;
 
-    GLFWwindow* Setup();
+    GLFWwindow* Setup(std::string title);
 }
 namespace imgui
 {

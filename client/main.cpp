@@ -22,7 +22,7 @@ int main(int argc, char* argv[])
     }
     std::atomic<bool> should_run(true);
     int sockfd = networkSetup();
-    GLFWwindow* window = glfw::Setup();
+    GLFWwindow* window = glfw::Setup(std::string("USER: " + name));
     ImGuiIO& io = imgui::Setup(window); (void)io;
 
     std::string dynamicTextBuffer;

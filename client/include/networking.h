@@ -11,7 +11,7 @@
 #include <string.h>
 #include <atomic>
 
-#define PORT 62
+#define PORT 8080
 extern std::string name;
 
 struct Data;
