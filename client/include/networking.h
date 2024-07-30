@@ -16,5 +16,5 @@ extern std::string name;
 
 struct Data;
 int networkSetup();
-void* sendToServer(int sockfd, std::string& message);
+void sendToServer(int sockfd, std::string& message);
 void* recvFromServer(int sockfd, std::string* imguiBuffer, std::atomic<bool>& should_run);

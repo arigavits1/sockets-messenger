@@ -15,6 +15,9 @@ int main(int argc, char* argv[])
     server_address.sin_port = htons(PORT);
     inet_pton(AF_INET, "127.0.0.1", &(server_address.sin_addr));
 
+    int option = 1;
+    setsockopt(sockData.sockfd, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
+
     if (bind(sockData.sockfd, (const struct sockaddr*)&server_address, sizeof(server_address)) == -1)
     {
         perror("Bind error");
@@ -70,6 +73,11 @@ int main(int argc, char* argv[])
                 if (exit_code == -1)
                 {
                     free(sockData.client_array);
+                    free(names.array[0]);
+                    fflush(stdout);
+                    free(names.array);
+                    names.next = 0;
+                    names.size = 0;
                     SetupSockets(&sockData);
                 }
             }
@@ -97,8 +105,16 @@ int main(int argc, char* argv[])
                 }
                 continue;
             }
-            char name[11];
-            ssize_t bytes_received = recv(sockData.client_array[sockData.max_clients], name, sizeof(name), 0);
+            names.size += sizeof(char*);
+            void* namesReallocCheck = realloc(names.array, names.size);
+            if (namesReallocCheck == NULL)
+            {
+                perror("realloc");
+                return 1;
+            }
+            names.array[names.next] = (char*)malloc(sizeof(char) * NAMESIZE);
+            char tempName[NAMESIZE];
+            ssize_t bytes_received = recv(sockData.client_array[sockData.max_clients], tempName, NAMESIZE, 0);
             if (bytes_received < 0)
             {
                 sockData.client_size -= sizeof(int);
@@ -108,9 +124,20 @@ int main(int argc, char* argv[])
                     perror("realloc");
                     return 1;
                 }
+
+                names.size -= sizeof(char*);
+                void* namesReallocCheck = realloc(names.array, names.size);
+                if (namesReallocCheck == NULL)
+                {
+                    perror("realloc");
+                    return 1;
+                }
+                perror("recv");
                 continue;
             }
-            printf("User %s has connected!\n", name);
+            names.array[names.next] = tempName;
+            printf("User %s has connected!\n", names.array[names.next]);
+            names.next++;
             sendCode(sockData.client_array[sockData.max_clients], 200);
 
             if (sockData.client_array[sockData.max_clients] > sockData.max_fd)
@@ -121,5 +148,5 @@ int main(int argc, char* argv[])
             sockData.max_clients++;
         }
     }
-    quit(&sockData, 0);
+    quit(&sockData, names, 0);
 }

@@ -11,8 +11,10 @@
 #include <pthread.h>
 #include <ctype.h>
 #include <sys/time.h>
+#include <stdbool.h>
 
 #define PORT 8080
+#define NAMESIZE 11
 
 typedef struct
 {
@@ -46,10 +48,10 @@ void sendCode(int clientfd, int code)
     send(clientfd, buffer, sizeof(buffer), 0);
 }
 
-int RemoveFromArray(int* array, size_t* size, int index)
+int RemoveFromIntArray(int* array, size_t* size, int index)
 {
     int temp_sock;
-    int array_size = *size / sizeof(int);
+    size_t array_size = *size / sizeof(int);
     temp_sock = array[index];
     array[index] = array[array_size - 1];
     array[array_size - 1] = temp_sock;
@@ -69,7 +71,42 @@ int RemoveFromArray(int* array, size_t* size, int index)
     return 0;
 }
 
-void quit(SocketData* sockData, int exit_code)
+int RemoveFromCharArray(char** array, size_t* size, int index)
+{
+    char* temp_sock;
+    size_t array_size = *size / sizeof(char*);
+    temp_sock = array[index];
+    array[index] = array[array_size - 1];
+    array[array_size - 1] = temp_sock;
+    
+    if (array_size == 1)
+    {
+        return -1;
+    }
+
+    *size -= sizeof(char*);
+    void *temp = realloc(array, *size);
+    if (temp == NULL) 
+    {
+        perror("realloc");
+        return 1;
+    }
+    return 0;
+}
+
+bool CheckIfInCharArray(char** array, size_t arrayCount, char* item)
+{
+    for(int i = 0; i < arrayCount; i++)
+    {
+        if (strcmp(array[i], item) == 0)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+void quit(SocketData* sockData, CharArray names, int exit_code)
 {
     for (int i = 0; i < sockData->max_clients - 1; i++)
     {
@@ -77,6 +114,14 @@ void quit(SocketData* sockData, int exit_code)
     }
     close(sockData->sockfd);
     free(sockData->client_array);
+    if (names.array !=  NULL)
+    {
+        for(int i = 0; i < names.next; i++)
+        {
+            free(names.array[i]);
+        }
+        free(names.array);
+    }
     printf("Quitting...\n");
     exit(exit_code);
 }
@@ -94,15 +139,22 @@ void SetupSockets(SocketData* sockData)
         free(sockData->client_array);
         SetupSockets(sockData);
     }
-    char name[11];
-    ssize_t bytes_received = recv(sockData->client_array[0], name, sizeof(name), 0);
+
+    names.size = sizeof(char*);
+    names.array = (char**)malloc(names.size);
+    names.array[0] = (char*)malloc(sizeof(char) * NAMESIZE);
+    ssize_t bytes_received = recv(sockData->client_array[0], names.array[0], NAMESIZE, 0);
+    names.array[0][bytes_received] = '\0';
     if (bytes_received < 0)
     {
         fprintf(stderr, "Connection to new client failed");
         free(sockData->client_array);
+        free(names.array[0]);
+        free(names.array);
         SetupSockets(sockData);
     }
-    printf("User %s has connected!\n", name);
+    names.next++;
+    printf("User %s has connected!\n", names.array[0]);
     sendCode(sockData->client_array[0], 200);
     sockData->max_fd = sockData->client_array[0];
     if (sockData->sockfd > sockData->max_fd)
@@ -136,9 +188,10 @@ int handleClientMessage(SocketData* sockData, int index)
     {
         printf("User %s has disconnected\n", sendData.name);
         fflush(stdout);
-        int code = RemoveFromArray(sockData->client_array, &sockData->client_size, index);
+        int code = RemoveFromIntArray(sockData->client_array, &sockData->client_size, index);
+        
         sockData->max_clients--;
-        send(sockData->client_array[sockData->max_clients], buffer, sizeof(buffer), 0);
+        //send(sockData->client_array[sockData->max_clients], buffer, sizeof(buffer), 0);
         close(sockData->client_array[sockData->max_clients]);
         return code;
     }

@@ -7,7 +7,7 @@ struct Data
     char name[11];
 } typedef Data;
 
-void* sendToServer(int sockfd, std::string& message)
+void sendToServer(int sockfd, std::string& message)
 {
     Data sendData;
     strncpy(sendData.buffer, message.c_str(), sizeof(sendData.buffer));
@@ -19,7 +19,11 @@ void* sendToServer(int sockfd, std::string& message)
     {
         perror("Error sending data");
     }
-    return NULL;
+    if (strcmp(sendData.buffer, "bye") == 0)
+    {
+        exit(0);
+    }
+    return;
 }
 
 int networkSetup()
@@ -53,11 +57,9 @@ int networkSetup()
         exit(-1);
     }
     int code = atoi(buffer);
-    if (code != 200)
+    if (code == 201)
     {
-        std::cerr << "Something went wrong" << std::endl;
-        std::string message = "bye";
-        sendToServer(sockfd, std::ref(message));
+        std::cerr << "Username already taken" << std::endl;
         exit(-1);
     }
 
@@ -77,8 +79,8 @@ void* recvFromServer(int sockfd, std::string* imguiBuffer, std::atomic<bool>& sh
         FD_ZERO(&readfds);
         FD_SET(sockfd, &readfds);
 
-        tv.tv_sec = 5;
-        tv.tv_usec = 0;
+        tv.tv_sec = 0;
+        tv.tv_usec = 10000;
 
         int select_result = select(sockfd + 1, &readfds, NULL, NULL, &tv);
 
@@ -104,7 +106,7 @@ void* recvFromServer(int sockfd, std::string* imguiBuffer, std::atomic<bool>& sh
         }
         else if (bytes_received == 0)
         {
-            break;
+            continue;;
         }
 
         if (strcmp(recvData.buffer, "") == 0)
@@ -123,7 +125,7 @@ void* recvFromServer(int sockfd, std::string* imguiBuffer, std::atomic<bool>& sh
             should_run = false;
             break;
         }
-    }    
+    }
 
     return NULL;
 }

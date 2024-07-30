@@ -42,20 +42,14 @@ int main(int argc, char* argv[])
         imgui::InputWindow("Prompt", inputBuffer, inputBufferSize, ImVec2(glfw::WIN_WIDTH, 100), ImVec2(0.0f, glfw::WIN_HEIGHT / 1.2f));
         if (ImGui::IsKeyPressed(ImGuiKey_Enter) && inputBuffer[0] != '\0')
         {
-            //dynamicTextBuffer += "\n" + clientName + ": ";
             std::string tempBuffer(inputBuffer, inputBufferSize);
             sendToServer(sockfd, tempBuffer);
-            // dynamicTextBuffer += inputBuffer;
             memset(inputBuffer, 0, sizeof(inputBuffer));
         }
 
-        glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
-        glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
-
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
+        
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
